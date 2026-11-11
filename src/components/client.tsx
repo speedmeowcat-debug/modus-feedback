@@ -2,7 +2,7 @@
 
 // Клиентские примитивы: отправка форм без потери введённого, подтверждение, автоотправка фильтров.
 
-import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type FormEvent, type ReactNode } from "react";
 import { LoaderCircle, SlidersHorizontal } from "lucide-react";
 import type { ActionState } from "@/lib/action-state";
 import { Button, Notice, buttonClass, cx } from "./ui";
@@ -54,14 +54,20 @@ export function Spinner() {
   return <LoaderCircle className="size-4 animate-spin" aria-hidden />;
 }
 
+const subscribeNoop = () => () => {};
+
 export function SubmitButton({
   pending,
   children,
   pendingText = "Сохраняем",
   ...rest
 }: React.ComponentProps<typeof Button> & { pending: boolean; pendingText?: string }) {
+  // До загрузки скриптов браузер отправил бы форму обычным GET-запросом: данные формы,
+  // включая пароль на странице входа, попали бы в адресную строку. Поэтому до гидратации
+  // кнопка неактивна; при неактивной кнопке браузер не отправляет форму и по Enter.
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
   return (
-    <Button type="submit" variant="primary" {...rest} disabled={pending || rest.disabled} aria-busy={pending}>
+    <Button type="submit" variant="primary" {...rest} disabled={!hydrated || pending || rest.disabled} aria-busy={pending}>
       {pending && <Spinner />}
       {pending ? pendingText : children}
     </Button>
