@@ -210,7 +210,12 @@ export function Product({ f }: { f: number }) {
   const stage =
     ev(f, W_REVIEW, 16) + ev(f, W_WORK, 16) + ev(f, W_DONE, 16); // 0..3: Новое → … → Реализовано
   const toAdmin = ev(f, W_OUT, A_LAND - W_OUT, "inOutCubic");
-  const clusterO = out(f, W_OUT, 40); // окружение карточки уходит, карточка летит дальше
+  // Окружение карточки уходит вместе с движением камеры (вправо-вниз) и быстро, но плавно гаснет.
+  const clusterGo = ev(f, W_OUT, 70, "outCubic");
+  const clusterO = 1 - ev(f, W_OUT, 32, "inOutSine");
+  const cdx = clusterGo * 340;
+  const cdy = clusterGo * 160;
+  const cBlur = ev(f, W_OUT, 32, "inOutSine") * 4;
   const heroO = f < C_LIFT ? 0 : 1 - ev(f, A_LAND - 8, 10);
   const heroPos = { x: lerp(HERO.x, LAND.x - 380 * 0.16, toAdmin), y: lerp(HERO.y, LAND.y - 140 * 0.16, toAdmin) };
   const heroScale = lerp(1, 0.16, toAdmin);
@@ -246,19 +251,19 @@ export function Product({ f }: { f: number }) {
         {/* процесс рассмотрения вокруг карточки */}
         {f >= C_LIFT && (
           <>
-            <At x={STEPPER.x} y={STEPPER.y} origin="topleft" o={ev(f, W_STEPPER, 30) * clusterO} z={lift * 10}>
+            <At x={STEPPER.x + cdx} y={STEPPER.y + cdy} origin="topleft" o={ev(f, W_STEPPER, 30) * clusterO} z={lift * 10} blur={cBlur}>
               <Stepper stage={stage} />
             </At>
-            <At x={RULE.x} y={RULE.y} origin="topleft" o={sp(f, W_RULE, "snappy") * clusterO} z={lift * 10}>
+            <At x={RULE.x + cdx} y={RULE.y + cdy} origin="topleft" o={sp(f, W_RULE, "snappy") * clusterO} z={lift * 10} blur={cBlur}>
               <RuleCard />
             </At>
-            <At x={0} y={0} origin="topleft" o={clusterO} z={lift * 10}>
+            <At x={cdx} y={cdy} origin="topleft" o={clusterO} z={lift * 10}>
               <RouteLines p={ev(f, W_ROUTE, W_ROUTE_DUR, "inOutCubic")} />
             </At>
-            <At x={HISTORY.x} y={HISTORY.y} origin="topleft" o={ev(f, W_STEPPER, 30) * clusterO} z={lift * 10}>
+            <At x={HISTORY.x + cdx} y={HISTORY.y + cdy} origin="topleft" o={ev(f, W_STEPPER, 30) * clusterO} z={lift * 10} blur={cBlur}>
               <HistoryCard items={HISTORY_ITEMS} f={f} />
             </At>
-            <At x={RESULT.x} y={RESULT.y} origin="topleft" o={sp(f, W_RESULT, "smooth") * clusterO} z={lift * 10 + (1 - sp(f, W_RESULT, "smooth")) * -60}>
+            <At x={RESULT.x + cdx} y={RESULT.y + cdy} blur={cBlur} origin="topleft" o={sp(f, W_RESULT, "smooth") * clusterO} z={lift * 10 + (1 - sp(f, W_RESULT, "smooth")) * -60}>
               <ResultCard />
             </At>
             <At x={heroPos.x} y={heroPos.y} s={heroScale} origin="topleft" o={heroO} z={lift * 40 * (1 - toAdmin)} style={{ transformOrigin: "0 0" }}>

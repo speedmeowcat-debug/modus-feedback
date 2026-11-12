@@ -205,7 +205,11 @@ def main() -> None:
     ap.add_argument("timeline", type=Path)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--name", default="audio")
+    ap.add_argument("--samples", type=Path, default=None, help="folder with recorded SFX samples")
     a = ap.parse_args()
+    if a.samples:
+        from . import sfx as _sfx
+        _sfx.SAMPLE_DIR = a.samples
     tl = json.loads(a.timeline.read_text())
     rep = render(tl, a.out, a.name)
     L = rep["loudness"]

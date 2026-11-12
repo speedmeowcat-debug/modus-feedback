@@ -62,6 +62,10 @@ export interface CueInput {
   peak?: number;
   /** 0 dark .. 1 bright. Map to visual brightness/size (small+bright, big+dark). */
   brightness?: number;
+  /** Optional recorded sample (file name inside the samples folder). Replaces the synth recipe. */
+  sample?: string;
+  /** Extra gain for a sample, dB. */
+  gainDb?: number;
 }
 
 export interface ResolvedCue {
@@ -78,6 +82,8 @@ export interface ResolvedCue {
   peak: number;
   brightness: number;
   seed: number;
+  sample?: string;
+  gainDb?: number;
 }
 
 const KIND_DEFAULTS: Record<
@@ -273,6 +279,7 @@ export function createTimeline(spec: TimelineSpec) {
         peak: clamp01(input.peak ?? 0.6),
         brightness: clamp01(input.brightness ?? d.brightness),
         seed: hashString(input.id),
+        ...(input.sample ? { sample: input.sample, gainDb: input.gainDb ?? 0 } : {}),
       });
       return input.frame;
     },

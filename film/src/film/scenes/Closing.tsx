@@ -34,7 +34,7 @@ function Chip({ text, planned }: { text: string; planned?: boolean }) {
   );
 }
 
-export function Closing({ f, finalOnly = false }: { f: number; finalOnly?: boolean }) {
+export function Closing({ f, finalOnly = false, noTitle = false }: { f: number; finalOnly?: boolean; noTitle?: boolean }) {
   if (f < 3150) return null;
   const leave = ev(f, F_OUT, 34, "emphasizedIn"); // всё уходит из кадра
   const cam = camTrack(f, { ...cam0, s: 1.25, z: 0 }, [
@@ -102,7 +102,7 @@ export function Closing({ f, finalOnly = false }: { f: number; finalOnly?: boole
       )}
 
       {/* финальный титр */}
-      {f >= F_TITLE - 2 && (
+      {f >= F_TITLE - 2 && !noTitle && (
         <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ transform: `scale(${drift})` }}>
           <div style={{ clipPath: "inset(-20px -600px 0 -600px)", paddingBottom: 6, whiteSpace: "nowrap" }}>
             <h1

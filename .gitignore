@@ -6,3 +6,10 @@ node_modules
 *.tsbuildinfo
 next-env.d.ts
 film/out
+__pycache__/
+*.pyc
+film/out*/
+# Сгенерированный звук: собирается командой `npm run audio` в film/
+film/public/*.wav
+# SFX из библиотеки KantTools: лицензия не позволяет выкладывать их в открытый доступ
+film/public/sfx/

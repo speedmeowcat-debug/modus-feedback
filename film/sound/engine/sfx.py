@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from pathlib import Path
 
 from . import dsp
 from .dsp import SR, secs, tt
@@ -357,7 +358,61 @@ RECIPES = {
 }
 
 
+import os as _os
+SAMPLE_DIR: "Path | None" = Path(_os.environ["SFX_SAMPLES"]) if _os.environ.get("SFX_SAMPLES") else None
+SAMPLE_TRIM_DB = -7.0  # общий запас для записанных сэмплов (они нормализованы к -1 dBFS)
+_SAMPLE_CACHE: dict = {}
+
+
+def _load_sample(name: str) -> np.ndarray:
+    from scipy.io import wavfile
+    if name not in _SAMPLE_CACHE:
+        if SAMPLE_DIR is None:
+            raise ValueError("cue uses a sample but no --samples folder was given")
+        sr, a = wavfile.read(str(SAMPLE_DIR / name))
+        if sr != SR:
+            raise ValueError(f"sample {name}: {sr} Hz, expected {SR}")
+        if a.dtype.kind == "i":
+            a = a.astype(np.float64) / float(np.iinfo(a.dtype).max)
+        a = a.astype(np.float64)
+        if a.ndim == 1:
+            a = np.stack([a, a], axis=1)
+        _SAMPLE_CACHE[name] = a[:, :2]
+    return _SAMPLE_CACHE[name]
+
+
+def sample_voice(cue: dict) -> Voice:
+    """Recorded sample: gain from intensity (+gainDb), constant-power pan, anchor at onset or loudness peak."""
+    a = _load_sample(cue["sample"]).copy()
+    g = float(cue["intensity"]) * 10 ** ((float(cue.get("gainDb", 0.0)) + SAMPLE_TRIM_DB) / 20.0)
+    pan = float(cue["pan"])
+    ang = (pan + 1.0) * np.pi / 4.0
+    a[:, 0] *= g * np.cos(ang) * np.sqrt(2)
+    a[:, 1] *= g * np.sin(ang) * np.sqrt(2)
+    # Точка привязки — тем же детектором, которым её проверяет verify_sync (analyze.audible_offset).
+    from . import dsp as _dsp
+    m = _dsp.highpass(a.mean(axis=1), 120.0, 2)
+    def env(ms):
+        w = max(1, int(SR * ms / 1000.0))
+        return np.convolve(np.abs(m), np.ones(w) / w, mode="same")
+    if cue["anchor"] == "peak":
+        anchor = int(np.argmax(env(25.0)))
+    elif cue["anchor"] == "end":
+        e = env(5.0)
+        anchor = int(np.nonzero(e >= 0.5 * float(e.max()))[0][-1])
+    else:
+        e = env(1.0)
+        on = int(np.argmax(e >= 0.10 * float(e.max())))
+        cut = max(0, on - int(0.004 * SR))  # убрать тихий хвост до атаки
+        a, e = a[cut:], e[cut:]
+        head = e[: int(0.15 * SR)]
+        anchor = int(np.argmax(head >= 0.10 * float(head.max())))
+    return Voice(a, min(anchor, len(a) - 1))
+
+
 def render_cue(cue: dict, ctx: Ctx) -> Voice:
+    if cue.get("sample"):
+        return sample_voice(cue)
     try:
         recipe = RECIPES[cue["kind"]]
     except KeyError as e:

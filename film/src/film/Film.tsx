@@ -9,7 +9,7 @@ import { BLUR_WINDOWS, F_OUT } from "./timeline";
 import { fontFamily } from "./font";
 
 /** Кадр ролика как чистая функция номера кадра (дробный кадр допустим: так работает motion blur). */
-function Frame({ offset = 0, finalOnly = false }: { offset?: number; finalOnly?: boolean }) {
+export function Frame({ offset = 0, finalOnly = false, noTitle = false }: { offset?: number; finalOnly?: boolean; noTitle?: boolean }) {
   const f = useCurrentFrame() + offset;
   const bg = finalOnly ? C.night : mix(mix(C.night, C.page, openingBg(f)), C.night, closingDark(f));
   return (
@@ -17,7 +17,7 @@ function Frame({ offset = 0, finalOnly = false }: { offset?: number; finalOnly?:
       {!finalOnly && <Opening f={f} />}
       {!finalOnly && <Product f={f} />}
       {!finalOnly && <Impact f={f} />}
-      <Closing f={f} finalOnly={finalOnly} />
+      <Closing f={f} finalOnly={finalOnly} noTitle={noTitle} />
     </AbsoluteFill>
   );
 }
