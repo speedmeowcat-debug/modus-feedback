@@ -632,7 +632,8 @@ export async function setDueDate(db: Db, actor: Actor, publicId: string, dateStr
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw invalid("Укажите дату.", { due: "Укажите дату в формате ДД.ММ.ГГГГ." });
   // Срок истекает в конце указанного дня по времени Павлодара (UTC+5).
   const due = new Date(`${dateStr}T23:59:59+05:00`);
-  if (Number.isNaN(due.getTime())) throw invalid("Укажите дату.", { due: "Такой даты не существует." });
+  if (Number.isNaN(due.getTime()) || due.toISOString().slice(0, 10) !== dateStr)
+    throw invalid("Укажите дату.", { due: "Такой даты не существует." });
   if (due.getTime() < Date.now()) throw invalid("Укажите дату.", { due: "Срок не может быть в прошлом." });
   await db.tx(async (q) => {
     const { ticket, perms } = await requireTicket(q, actor, publicId, true);
